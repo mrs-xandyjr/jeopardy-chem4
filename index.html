@@ -69,6 +69,11 @@
       background: #003366;
       padding: 10px 15px;
       border-radius: 8px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .score-box:hover {
+      background: #0059b3;
     }
   </style>
 </head>
@@ -92,7 +97,7 @@
   <script>
     const SHEET_ID = '1txasP_Te7O6BiyQvK88npPde_etEW9QnkOdAVzP7NKc';
     const API_KEY = 'AIzaSyDV4eHorJ4Rz8VJrnPuyXTpx30EcOc0ca4';
-    const RANGE = 'Sheet1'; // Change if your sheet has a different name
+    const RANGE = 'Sheet1';
 
     const scores = Array(8).fill(0);
 
@@ -103,6 +108,14 @@
         const box = document.createElement('div');
         box.className = 'score-box';
         box.textContent = `Team ${i + 1}: ${score}`;
+        box.onclick = () => {
+          const change = prompt(`Edit Team ${i + 1} score. Current: ${score}\nEnter +100 or -100 or any number:`);
+          const num = parseInt(change);
+          if (!isNaN(num)) {
+            scores[i] += num;
+            updateScores();
+          }
+        };
         container.appendChild(box);
       });
     }
@@ -158,7 +171,6 @@
       });
 
       const categoryNames = Object.keys(categories).slice(0, 5);
-
       categoryNames.forEach(cat => {
         categories[cat].sort((a, b) => Number(a.Points) - Number(b.Points));
       });
