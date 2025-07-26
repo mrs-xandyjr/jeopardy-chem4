@@ -86,11 +86,14 @@
     <div class="modal-content">
       <h2 id="questionText"></h2>
       <div id="imageContainer" style="margin: 15px 0;"></div>
+
+      <!-- Hidden until Show Answer is clicked -->
       <div id="answerSection" style="display: none;">
         <p><strong>Answer:</strong> <span id="answerText"></span></p>
         <div id="scoreButtons"></div>
       </div>
-      <button class="show-answer" onclick="revealAnswer()">Show Answer</button>
+
+      <button class="show-answer" id="showAnswerBtn" onclick="revealAnswer()">Show Answer</button>
       <button class="close" onclick="closeModal()">Close</button>
     </div>
   </div>
@@ -129,7 +132,7 @@
 
     function revealAnswer() {
       document.getElementById('answerSection').style.display = 'block';
-      document.querySelector('.show-answer').style.display = 'none';
+      document.getElementById('showAnswerBtn').style.display = 'none';
     }
 
     function showQuestion(question, answer, image, points, cell) {
@@ -139,7 +142,7 @@
       document.getElementById('questionText').textContent = question;
       document.getElementById('answerText').textContent = answer;
       document.getElementById('answerSection').style.display = 'none';
-      document.querySelector('.show-answer').style.display = 'inline-block';
+      document.getElementById('showAnswerBtn').style.display = 'inline-block';
 
       const imgContainer = document.getElementById('imageContainer');
       imgContainer.innerHTML = '';
