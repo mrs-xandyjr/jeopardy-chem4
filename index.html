@@ -71,8 +71,6 @@
       border-radius: 8px;
     }
   </style>
-  <!-- Load PapaParse from CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 </head>
 <body>
 
@@ -89,13 +87,12 @@
     </div>
   </div>
 
-  <div class="scores" id="scores">
-    <!-- Score boxes will appear here -->
-  </div>
+  <div class="scores" id="scores"></div>
 
   <script>
-    // Your Google Sheet CSV published link (replace if needed)
-    const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQQdg6a9recQuvlxHnC2BWrGx3frdc1nX3YtRVhgxlC1M5Gux_bLFQzTk_RVfDA-6BDvcSczWtOp6JF/pub?output=csv';
+    const SHEET_ID = '1txasP_Te7O6BiyQvK88npPde_etEW9QnkOdAVzP7NKc';
+    const API_KEY = 'AIzaSyDV4eHorJ4Rz8VJrnPuyXTpx30EcOc0ca4';
+    const RANGE = 'Sheet1'; // Change if your sheet has a different name
 
     const scores = Array(8).fill(0);
 
@@ -152,7 +149,6 @@
       const board = document.getElementById('board');
       board.innerHTML = '';
 
-      // Group questions by category
       const categories = {};
       data.forEach(item => {
         if (!categories[item.Category]) {
@@ -163,12 +159,10 @@
 
       const categoryNames = Object.keys(categories).slice(0, 5);
 
-      // Sort questions by point value
       categoryNames.forEach(cat => {
         categories[cat].sort((a, b) => Number(a.Points) - Number(b.Points));
       });
 
-      // Add headers
       categoryNames.forEach(cat => {
         const cell = document.createElement('div');
         cell.className = 'cell';
@@ -176,7 +170,6 @@
         board.appendChild(cell);
       });
 
-      // Add question cells
       const maxRows = Math.max(...Object.values(categories).map(qs => qs.length));
       for (let i = 0; i < maxRows; i++) {
         categoryNames.forEach(cat => {
@@ -202,17 +195,22 @@
     }
 
     function fetchAndStart() {
-      Papa.parse(csvUrl, {
-        download: true,
-        header: true,
-        complete: function(results) {
-          createBoard(results.data);
-        },
-        error: function(err) {
-          console.error('CSV fetch error:', err);
+      const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${RANGE}?key=${API_KEY}`;
+      fetch(url)
+        .then(res => res.json())
+        .then(data => {
+          const [headers, ...rows] = data.values;
+          const formatted = rows.map(row => {
+            const obj = {};
+            headers.forEach((key, i) => obj[key] = row[i] || '');
+            return obj;
+          });
+          createBoard(formatted);
+        })
+        .catch(err => {
+          console.error('Google Sheets API error:', err);
           document.getElementById('board').textContent = 'Failed to load board.';
-        }
-      });
+        });
     }
 
     window.onload = fetchAndStart;
