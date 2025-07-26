@@ -69,9 +69,11 @@
       background: #003366;
       padding: 10px 15px;
       border-radius: 8px;
+      cursor: pointer;
+      user-select: none;
     }
-    #answerText {
-      display: none;
+    .score-box:hover {
+      background: #0059b3;
     }
   </style>
 </head>
@@ -85,24 +87,19 @@
       <h2 id="questionText"></h2>
       <div id="imageContainer" style="margin: 15px 0;"></div>
       <p><strong>Answer:</strong> <span id="answerText"></span></p>
-      <button id="showAnswerBtn">Show Answer</button>
-      <div id="scoreButtons" style="margin-top: 15px;"></div>
+      <div id="scoreButtons"></div>
       <button class="close" onclick="closeModal()">Close</button>
     </div>
   </div>
 
-  <div class="scores" id="scores">
-    <!-- Score boxes will appear here -->
-  </div>
+  <div class="scores" id="scores"></div>
 
   <script>
-    const sheetID = '1txasP_Te7O6BiyQvK88npPde_etEW9QnkOdAVzP7NKc';
-    const apiKey = 'AIzaSyDV4eHorJ4Rz8VJrnPuyXTpx30EcOc0ca4';
-    const range = 'Sheet1'; // No space, exactly as in your sheet tab
+    const SHEET_ID = '1txasP_Te7O6BiyQvK88npPde_etEW9QnkOdAVzP7NKc';
+    const API_KEY = 'AIzaSyDV4eHorJ4Rz8VJrnPuyXTpx30EcOc0ca4';
+    const RANGE = 'Sheet1';
 
-    let scores = Array(8).fill(0);
-    let currentCell = null;
-    let currentPoints = 0;
+    const scores = Array(8).fill(0);
 
     function updateScores() {
       const container = document.getElementById('scores');
@@ -111,29 +108,28 @@
         const box = document.createElement('div');
         box.className = 'score-box';
         box.textContent = `Team ${i + 1}: ${score}`;
+        box.onclick = () => {
+          const change = prompt(`Edit Team ${i + 1} score. Current: ${score}\nEnter +100 or -100 or any number:`);
+          const num = parseInt(change);
+          if (!isNaN(num)) {
+            scores[i] += num;
+            updateScores();
+          }
+        };
         container.appendChild(box);
       });
     }
 
     function closeModal() {
       document.getElementById('questionModal').style.display = 'none';
-      currentCell = null;
-      currentPoints = 0;
-      document.getElementById('answerText').style.display = 'none';
-      document.getElementById('showAnswerBtn').style.display = 'inline-block';
-      document.getElementById('scoreButtons').innerHTML = '';
     }
 
     function showQuestion(question, answer, image, points, cell) {
       if (cell.classList.contains('used')) return;
-      currentCell = cell;
-      currentPoints = parseInt(points);
       cell.classList.add('used');
 
       document.getElementById('questionText').textContent = question;
-      const answerSpan = document.getElementById('answerText');
-      answerSpan.textContent = answer;
-      answerSpan.style.display = 'none';
+      document.getElementById('answerText').textContent = answer;
 
       const imgContainer = document.getElementById('imageContainer');
       imgContainer.innerHTML = '';
@@ -145,16 +141,6 @@
         imgContainer.appendChild(img);
       }
 
-      document.getElementById('scoreButtons').innerHTML = '';
-      document.getElementById('showAnswerBtn').style.display = 'inline-block';
-
-      document.getElementById('questionModal').style.display = 'flex';
-    }
-
-    document.getElementById('showAnswerBtn').onclick = function() {
-      document.getElementById('answerText').style.display = 'inline';
-      this.style.display = 'none';
-
       const scoreButtons = document.getElementById('scoreButtons');
       scoreButtons.innerHTML = '<p>Who answered correctly?</p>';
       for (let i = 0; i < scores.length; i++) {
@@ -162,13 +148,15 @@
         btn.textContent = `Team ${i + 1}`;
         btn.style.margin = '5px';
         btn.onclick = () => {
-          scores[i] += currentPoints;
+          scores[i] += parseInt(points);
           updateScores();
           closeModal();
         };
         scoreButtons.appendChild(btn);
       }
-    };
+
+      document.getElementById('questionModal').style.display = 'flex';
+    }
 
     function createBoard(data) {
       const board = document.getElementById('board');
@@ -176,7 +164,6 @@
 
       const categories = {};
       data.forEach(item => {
-        if (!item.Category || !item.Points) return;
         if (!categories[item.Category]) {
           categories[item.Category] = [];
         }
@@ -184,7 +171,6 @@
       });
 
       const categoryNames = Object.keys(categories).slice(0, 5);
-
       categoryNames.forEach(cat => {
         categories[cat].sort((a, b) => Number(a.Points) - Number(b.Points));
       });
@@ -220,36 +206,26 @@
       updateScores();
     }
 
-    async function fetchSheetData() {
-      const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetID}/values/${encodeURIComponent(range)}?key=${apiKey}`;
-      try {
-        const response = await fetch(url);
-        if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-        const data = await response.json();
-        if (!data.values || data.values.length === 0) {
-          throw new Error('No data found in the sheet.');
-        }
-
-        const headers = data.values[0];
-        const rows = data.values.slice(1);
-        const formattedData = rows.map(row => {
-          const obj = {};
-          headers.forEach((header, i) => {
-            obj[header.trim()] = row[i] ? row[i].trim() : '';
+    function fetchAndStart() {
+      const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${RANGE}?key=${API_KEY}`;
+      fetch(url)
+        .then(res => res.json())
+        .then(data => {
+          const [headers, ...rows] = data.values;
+          const formatted = rows.map(row => {
+            const obj = {};
+            headers.forEach((key, i) => obj[key] = row[i] || '');
+            return obj;
           });
-          return obj;
+          createBoard(formatted);
+        })
+        .catch(err => {
+          console.error('Google Sheets API error:', err);
+          document.getElementById('board').textContent = 'Failed to load board.';
         });
-
-        createBoard(formattedData);
-      } catch (error) {
-        console.error('Error fetching sheet data:', error);
-        document.getElementById('board').textContent = 'Failed to load board.';
-      }
     }
 
-    window.onload = fetchSheetData;
+    window.onload = fetchAndStart;
   </script>
 
 </body>
