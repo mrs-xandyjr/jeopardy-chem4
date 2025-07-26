@@ -49,7 +49,7 @@
       width: 500px;
       max-width: 90%;
     }
-    .close {
+    .close, .show-answer {
       margin-top: 20px;
       background: #004080;
       color: white;
@@ -86,8 +86,11 @@
     <div class="modal-content">
       <h2 id="questionText"></h2>
       <div id="imageContainer" style="margin: 15px 0;"></div>
-      <p><strong>Answer:</strong> <span id="answerText"></span></p>
-      <div id="scoreButtons"></div>
+      <div id="answerSection" style="display: none;">
+        <p><strong>Answer:</strong> <span id="answerText"></span></p>
+        <div id="scoreButtons"></div>
+      </div>
+      <button class="show-answer" onclick="revealAnswer()">Show Answer</button>
       <button class="close" onclick="closeModal()">Close</button>
     </div>
   </div>
@@ -124,12 +127,19 @@
       document.getElementById('questionModal').style.display = 'none';
     }
 
+    function revealAnswer() {
+      document.getElementById('answerSection').style.display = 'block';
+      document.querySelector('.show-answer').style.display = 'none';
+    }
+
     function showQuestion(question, answer, image, points, cell) {
       if (cell.classList.contains('used')) return;
       cell.classList.add('used');
 
       document.getElementById('questionText').textContent = question;
       document.getElementById('answerText').textContent = answer;
+      document.getElementById('answerSection').style.display = 'none';
+      document.querySelector('.show-answer').style.display = 'inline-block';
 
       const imgContainer = document.getElementById('imageContainer');
       imgContainer.innerHTML = '';
