@@ -40,7 +40,6 @@
       display: none;
       justify-content: center;
       align-items: center;
-      z-index: 10;
     }
     .modal-content {
       background: white;
@@ -49,7 +48,6 @@
       border-radius: 10px;
       width: 500px;
       max-width: 90%;
-      position: relative;
     }
     .close {
       margin-top: 20px;
@@ -72,18 +70,8 @@
       padding: 10px 15px;
       border-radius: 8px;
     }
-    .score-box button {
-      margin: 0 5px;
-      font-size: 16px;
-    }
-    #showAnswerBtn {
-      margin-top: 15px;
-      background: #0066cc;
-      color: white;
-      padding: 8px 16px;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
+    #answerText {
+      display: none;
     }
   </style>
 </head>
@@ -96,27 +84,25 @@
     <div class="modal-content">
       <h2 id="questionText"></h2>
       <div id="imageContainer" style="margin: 15px 0;"></div>
-      
-      <button id="showAnswerBtn" onclick="revealAnswer()">Show Answer</button>
-      <div id="answerSection" style="display: none;">
-        <p><strong>Answer:</strong> <span id="answerText"></span></p>
-      </div>
-
-      <div id="scoreButtons"></div>
+      <p><strong>Answer:</strong> <span id="answerText"></span></p>
+      <button id="showAnswerBtn">Show Answer</button>
+      <div id="scoreButtons" style="margin-top: 15px;"></div>
       <button class="close" onclick="closeModal()">Close</button>
     </div>
   </div>
 
-  <div class="scores" id="scores"></div>
+  <div class="scores" id="scores">
+    <!-- Score boxes will appear here -->
+  </div>
 
   <script>
     const sheetID = '1txasP_Te7O6BiyQvK88npPde_etEW9QnkOdAVzP7NKc';
-    const apiKey = 'AIzaSyDV4eHorJ4Rz8VJrnPuyXTpx30EcOc0ca4';
-    const range = 'Sheet1'; // Change if your sheet name is different
-    const apiUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetID}/values/${range}?key=${apiKey}`;
+    const apiKey = 'AIzaSyDV4eHorJ4z8VJrnPuyXTpx30EcOc0ca4';  // Make sure this is exactly your API key
+    const range = 'Sheet 1';  // exact sheet tab name
 
-    const scores = Array(8).fill(0);
-    let currentAnswer = '';
+    let scores = Array(8).fill(0);
+    let currentCell = null;
+    let currentPoints = 0;
 
     function updateScores() {
       const container = document.getElementById('scores');
@@ -124,40 +110,31 @@
       scores.forEach((score, i) => {
         const box = document.createElement('div');
         box.className = 'score-box';
-        box.innerHTML = `
-          Team ${i + 1}: <span id="score-${i}">${score}</span>
-          <button onclick="changeScore(${i}, 100)">+100</button>
-          <button onclick="changeScore(${i}, -100)">-100</button>
-        `;
+        box.textContent = `Team ${i + 1}: ${score}`;
         container.appendChild(box);
       });
     }
 
-    function changeScore(index, delta) {
-      scores[index] += delta;
-      updateScores();
-    }
-
     function closeModal() {
       document.getElementById('questionModal').style.display = 'none';
-    }
-
-    function revealAnswer() {
-      document.getElementById('answerText').textContent = currentAnswer;
-      document.getElementById('answerSection').style.display = 'block';
-      document.getElementById('showAnswerBtn').style.display = 'none';
+      currentCell = null;
+      currentPoints = 0;
+      // Reset answer display and buttons
+      document.getElementById('answerText').style.display = 'none';
+      document.getElementById('showAnswerBtn').style.display = 'inline-block';
+      document.getElementById('scoreButtons').innerHTML = '';
     }
 
     function showQuestion(question, answer, image, points, cell) {
       if (cell.classList.contains('used')) return;
+      currentCell = cell;
+      currentPoints = parseInt(points);
       cell.classList.add('used');
 
-      currentAnswer = answer;
-
       document.getElementById('questionText').textContent = question;
-      document.getElementById('answerText').textContent = '';
-      document.getElementById('answerSection').style.display = 'none';
-      document.getElementById('showAnswerBtn').style.display = 'inline-block';
+      const answerSpan = document.getElementById('answerText');
+      answerSpan.textContent = answer;
+      answerSpan.style.display = 'none';
 
       const imgContainer = document.getElementById('imageContainer');
       imgContainer.innerHTML = '';
@@ -169,6 +146,18 @@
         imgContainer.appendChild(img);
       }
 
+      // Hide score buttons initially
+      document.getElementById('scoreButtons').innerHTML = '';
+      document.getElementById('showAnswerBtn').style.display = 'inline-block';
+
+      document.getElementById('questionModal').style.display = 'flex';
+    }
+
+    document.getElementById('showAnswerBtn').onclick = function() {
+      document.getElementById('answerText').style.display = 'inline';
+      this.style.display = 'none';
+
+      // Now show score buttons
       const scoreButtons = document.getElementById('scoreButtons');
       scoreButtons.innerHTML = '<p>Who answered correctly?</p>';
       for (let i = 0; i < scores.length; i++) {
@@ -176,46 +165,36 @@
         btn.textContent = `Team ${i + 1}`;
         btn.style.margin = '5px';
         btn.onclick = () => {
-          scores[i] += parseInt(points);
+          scores[i] += currentPoints;
           updateScores();
           closeModal();
         };
         scoreButtons.appendChild(btn);
       }
+    };
 
-      document.getElementById('questionModal').style.display = 'flex';
-    }
-
-    function createBoard(dataRows) {
+    function createBoard(data) {
       const board = document.getElementById('board');
       board.innerHTML = '';
 
-      const [headers, ...rows] = dataRows;
-      const categoryIndex = headers.indexOf('Category');
-      const questionIndex = headers.indexOf('Question');
-      const answerIndex = headers.indexOf('Answer');
-      const imageIndex = headers.indexOf('Image');
-      const pointsIndex = headers.indexOf('Points');
-
+      // Group questions by category
       const categories = {};
-
-      rows.forEach(row => {
-        const category = row[categoryIndex];
-        if (!categories[category]) categories[category] = [];
-        categories[category].push({
-          Question: row[questionIndex],
-          Answer: row[answerIndex],
-          Image: row[imageIndex],
-          Points: row[pointsIndex],
-          Category: category
-        });
+      data.forEach(item => {
+        if (!item.Category || !item.Points) return;  // ignore incomplete rows
+        if (!categories[item.Category]) {
+          categories[item.Category] = [];
+        }
+        categories[item.Category].push(item);
       });
 
       const categoryNames = Object.keys(categories).slice(0, 5);
+
+      // Sort questions by point value
       categoryNames.forEach(cat => {
         categories[cat].sort((a, b) => Number(a.Points) - Number(b.Points));
       });
 
+      // Add headers
       categoryNames.forEach(cat => {
         const cell = document.createElement('div');
         cell.className = 'cell';
@@ -223,6 +202,7 @@
         board.appendChild(cell);
       });
 
+      // Add question cells
       const maxRows = Math.max(...Object.values(categories).map(qs => qs.length));
       for (let i = 0; i < maxRows; i++) {
         categoryNames.forEach(cat => {
@@ -247,23 +227,38 @@
       updateScores();
     }
 
-    function fetchAndStart() {
-      fetch(apiUrl)
-        .then(response => response.json())
-        .then(data => {
-          if (!data.values || data.values.length === 0) {
-            document.getElementById('board').textContent = 'No data found.';
-            return;
-          }
-          createBoard(data.values);
-        })
-        .catch(error => {
-          console.error('Error fetching data:', error);
-          document.getElementById('board').textContent = 'Failed to load board.';
+    async function fetchSheetData() {
+      const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetID}/values/${encodeURIComponent(range)}?key=${apiKey}`;
+      try {
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        const data = await response.json();
+        if (!data.values || data.values.length === 0) {
+          throw new Error('No data found in the sheet.');
+        }
+
+        // Convert array of arrays to array of objects using header row
+        const headers = data.values[0];
+        const rows = data.values.slice(1);
+        const formattedData = rows.map(row => {
+          const obj = {};
+          headers.forEach((header, i) => {
+            obj[header.trim()] = row[i] ? row[i].trim() : '';
+          });
+          return obj;
         });
+
+        createBoard(formattedData);
+      } catch (error) {
+        console.error('Error fetching sheet data:', error);
+        document.getElementById('board').textContent = 'Failed to load board.';
+      }
     }
 
-    window.onload = fetchAndStart;
+    window.onload = fetchSheetData;
   </script>
+
 </body>
 </html>
