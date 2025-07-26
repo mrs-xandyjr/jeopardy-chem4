@@ -71,6 +71,8 @@
       border-radius: 8px;
     }
   </style>
+  <!-- Load PapaParse from CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 </head>
 <body>
 
@@ -92,7 +94,8 @@
   </div>
 
   <script>
-    const sheetKey = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQQdg6a9recQuvlxHnC2BWrGx3frdc1nX3YtRVhgxlC1M5Gux_bLFQzTk_RVfDA-6BDvcSczWtOp6JF/pubhtml';
+    // Your Google Sheet CSV published link (replace if needed)
+    const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQQdg6a9recQuvlxHnC2BWrGx3frdc1nX3YtRVhgxlC1M5Gux_bLFQzTk_RVfDA-6BDvcSczWtOp6JF/pub?output=csv';
 
     const scores = Array(8).fill(0);
 
@@ -198,27 +201,21 @@
       updateScores();
     }
 
-    function initJeopardy() {
-      if (typeof Tabletop === 'undefined') {
-        console.error('Tabletop.js failed to load.');
-        return;
-      }
-      Tabletop.init({
-        key: sheetKey,
-        simpleSheet: true,
-        callback: createBoard
+    function fetchAndStart() {
+      Papa.parse(csvUrl, {
+        download: true,
+        header: true,
+        complete: function(results) {
+          createBoard(results.data);
+        },
+        error: function(err) {
+          console.error('CSV fetch error:', err);
+          document.getElementById('board').textContent = 'Failed to load board.';
+        }
       });
     }
 
-    function loadTabletopAndStart() {
-      const script = document.createElement('script');
-      script.src = 'https://unpkg.com/tabletop@1.6.0/tabletop.js';
-      script.onload = initJeopardy;
-      script.onerror = () => console.error('Failed to load Tabletop.js');
-      document.head.appendChild(script);
-    }
-
-    window.onload = loadTabletopAndStart;
+    window.onload = fetchAndStart;
   </script>
 
 </body>
