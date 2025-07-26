@@ -71,7 +71,6 @@
       border-radius: 8px;
     }
   </style>
-  <script src="https://unpkg.com/tabletop@1.6.0/tabletop.js"></script>
 </head>
 <body>
 
@@ -199,13 +198,27 @@
       updateScores();
     }
 
-    window.onload = function () {
+    function initJeopardy() {
+      if (typeof Tabletop === 'undefined') {
+        console.error('Tabletop.js failed to load.');
+        return;
+      }
       Tabletop.init({
         key: sheetKey,
         simpleSheet: true,
         callback: createBoard
       });
-    };
+    }
+
+    function loadTabletopAndStart() {
+      const script = document.createElement('script');
+      script.src = 'https://unpkg.com/tabletop@1.6.0/tabletop.js';
+      script.onload = initJeopardy;
+      script.onerror = () => console.error('Failed to load Tabletop.js');
+      document.head.appendChild(script);
+    }
+
+    window.onload = loadTabletopAndStart;
   </script>
 
 </body>
