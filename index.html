@@ -40,6 +40,7 @@
       display: none;
       justify-content: center;
       align-items: center;
+      z-index: 10;
     }
     .modal-content {
       background: white;
@@ -48,8 +49,9 @@
       border-radius: 10px;
       width: 500px;
       max-width: 90%;
+      position: relative;
     }
-    .close, .show-answer {
+    .close {
       margin-top: 20px;
       background: #004080;
       color: white;
@@ -69,11 +71,19 @@
       background: #003366;
       padding: 10px 15px;
       border-radius: 8px;
-      cursor: pointer;
-      user-select: none;
     }
-    .score-box:hover {
-      background: #0059b3;
+    .score-box button {
+      margin: 0 5px;
+      font-size: 16px;
+    }
+    #showAnswerBtn {
+      margin-top: 15px;
+      background: #0066cc;
+      color: white;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
     }
   </style>
 </head>
@@ -86,14 +96,13 @@
     <div class="modal-content">
       <h2 id="questionText"></h2>
       <div id="imageContainer" style="margin: 15px 0;"></div>
-
-      <!-- Hidden until Show Answer is clicked -->
+      
+      <button id="showAnswerBtn" onclick="revealAnswer()">Show Answer</button>
       <div id="answerSection" style="display: none;">
         <p><strong>Answer:</strong> <span id="answerText"></span></p>
-        <div id="scoreButtons"></div>
       </div>
 
-      <button class="show-answer" id="showAnswerBtn" onclick="revealAnswer()">Show Answer</button>
+      <div id="scoreButtons"></div>
       <button class="close" onclick="closeModal()">Close</button>
     </div>
   </div>
@@ -101,11 +110,13 @@
   <div class="scores" id="scores"></div>
 
   <script>
-    const SHEET_ID = '1txasP_Te7O6BiyQvK88npPde_etEW9QnkOdAVzP7NKc';
-    const API_KEY = 'AIzaSyDV4eHorJ4Rz8VJrnPuyXTpx30EcOc0ca4';
-    const RANGE = 'Sheet1';
+    const sheetID = '1txasP_Te7O6BiyQvK88npPde_etEW9QnkOdAVzP7NKc';
+    const apiKey = 'AIzaSyDV4eHorJ4Rz8VJrnPuyXTpx30EcOc0ca4';
+    const range = 'Sheet1'; // Change if your sheet name is different
+    const apiUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetID}/values/${range}?key=${apiKey}`;
 
     const scores = Array(8).fill(0);
+    let currentAnswer = '';
 
     function updateScores() {
       const container = document.getElementById('scores');
@@ -113,17 +124,18 @@
       scores.forEach((score, i) => {
         const box = document.createElement('div');
         box.className = 'score-box';
-        box.textContent = `Team ${i + 1}: ${score}`;
-        box.onclick = () => {
-          const change = prompt(`Edit Team ${i + 1} score. Current: ${score}\nEnter +100 or -100 or any number:`);
-          const num = parseInt(change);
-          if (!isNaN(num)) {
-            scores[i] += num;
-            updateScores();
-          }
-        };
+        box.innerHTML = `
+          Team ${i + 1}: <span id="score-${i}">${score}</span>
+          <button onclick="changeScore(${i}, 100)">+100</button>
+          <button onclick="changeScore(${i}, -100)">-100</button>
+        `;
         container.appendChild(box);
       });
+    }
+
+    function changeScore(index, delta) {
+      scores[index] += delta;
+      updateScores();
     }
 
     function closeModal() {
@@ -131,6 +143,7 @@
     }
 
     function revealAnswer() {
+      document.getElementById('answerText').textContent = currentAnswer;
       document.getElementById('answerSection').style.display = 'block';
       document.getElementById('showAnswerBtn').style.display = 'none';
     }
@@ -139,8 +152,10 @@
       if (cell.classList.contains('used')) return;
       cell.classList.add('used');
 
+      currentAnswer = answer;
+
       document.getElementById('questionText').textContent = question;
-      document.getElementById('answerText').textContent = answer;
+      document.getElementById('answerText').textContent = '';
       document.getElementById('answerSection').style.display = 'none';
       document.getElementById('showAnswerBtn').style.display = 'inline-block';
 
@@ -171,16 +186,29 @@
       document.getElementById('questionModal').style.display = 'flex';
     }
 
-    function createBoard(data) {
+    function createBoard(dataRows) {
       const board = document.getElementById('board');
       board.innerHTML = '';
 
+      const [headers, ...rows] = dataRows;
+      const categoryIndex = headers.indexOf('Category');
+      const questionIndex = headers.indexOf('Question');
+      const answerIndex = headers.indexOf('Answer');
+      const imageIndex = headers.indexOf('Image');
+      const pointsIndex = headers.indexOf('Points');
+
       const categories = {};
-      data.forEach(item => {
-        if (!categories[item.Category]) {
-          categories[item.Category] = [];
-        }
-        categories[item.Category].push(item);
+
+      rows.forEach(row => {
+        const category = row[categoryIndex];
+        if (!categories[category]) categories[category] = [];
+        categories[category].push({
+          Question: row[questionIndex],
+          Answer: row[answerIndex],
+          Image: row[imageIndex],
+          Points: row[pointsIndex],
+          Category: category
+        });
       });
 
       const categoryNames = Object.keys(categories).slice(0, 5);
@@ -220,26 +248,22 @@
     }
 
     function fetchAndStart() {
-      const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${RANGE}?key=${API_KEY}`;
-      fetch(url)
-        .then(res => res.json())
+      fetch(apiUrl)
+        .then(response => response.json())
         .then(data => {
-          const [headers, ...rows] = data.values;
-          const formatted = rows.map(row => {
-            const obj = {};
-            headers.forEach((key, i) => obj[key] = row[i] || '');
-            return obj;
-          });
-          createBoard(formatted);
+          if (!data.values || data.values.length === 0) {
+            document.getElementById('board').textContent = 'No data found.';
+            return;
+          }
+          createBoard(data.values);
         })
-        .catch(err => {
-          console.error('Google Sheets API error:', err);
+        .catch(error => {
+          console.error('Error fetching data:', error);
           document.getElementById('board').textContent = 'Failed to load board.';
         });
     }
 
     window.onload = fetchAndStart;
   </script>
-
 </body>
 </html>
