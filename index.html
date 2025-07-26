@@ -70,6 +70,20 @@
       padding: 10px 15px;
       border-radius: 8px;
     }
+    #answerText {
+      display: none; /* Initially hide the answer */
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    #showAnswerBtn {
+      margin-top: 15px;
+      padding: 8px 15px;
+      cursor: pointer;
+      background-color: #004080;
+      color: white;
+      border: none;
+      border-radius: 5px;
+    }
   </style>
 </head>
 <body>
@@ -82,6 +96,7 @@
       <h2 id="questionText"></h2>
       <div id="imageContainer" style="margin: 15px 0;"></div>
       <p><strong>Answer:</strong> <span id="answerText"></span></p>
+      <button id="showAnswerBtn">Show Answer</button>
       <div id="scoreButtons"></div>
       <button class="close" onclick="closeModal()">Close</button>
     </div>
@@ -92,7 +107,7 @@
   <script>
     const SHEET_ID = '1txasP_Te7O6BiyQvK88npPde_etEW9QnkOdAVzP7NKc';
     const API_KEY = 'AIzaSyDV4eHorJ4Rz8VJrnPuyXTpx30EcOc0ca4';
-    const RANGE = 'Sheet1'; // Change if your sheet has a different name
+    const RANGE = 'Sheet1';
 
     const scores = Array(8).fill(0);
 
@@ -116,7 +131,10 @@
       cell.classList.add('used');
 
       document.getElementById('questionText').textContent = question;
-      document.getElementById('answerText').textContent = answer;
+      
+      const answerSpan = document.getElementById('answerText');
+      answerSpan.textContent = answer;
+      answerSpan.style.display = 'none'; // Hide answer initially
 
       const imgContainer = document.getElementById('imageContainer');
       imgContainer.innerHTML = '';
@@ -127,6 +145,13 @@
         img.style.maxHeight = '200px';
         imgContainer.appendChild(img);
       }
+
+      const showAnswerBtn = document.getElementById('showAnswerBtn');
+      showAnswerBtn.style.display = 'inline-block'; // Show button
+      showAnswerBtn.onclick = () => {
+        answerSpan.style.display = 'inline'; // Reveal answer
+        showAnswerBtn.style.display = 'none'; // Hide button after click
+      };
 
       const scoreButtons = document.getElementById('scoreButtons');
       scoreButtons.innerHTML = '<p>Who answered correctly?</p>';
@@ -199,6 +224,9 @@
       fetch(url)
         .then(res => res.json())
         .then(data => {
+          if (!data.values || data.values.length < 2) {
+            throw new Error('No data found or insufficient data.');
+          }
           const [headers, ...rows] = data.values;
           const formatted = rows.map(row => {
             const obj = {};
