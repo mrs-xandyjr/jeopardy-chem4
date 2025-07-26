@@ -70,8 +70,8 @@
       padding: 10px 15px;
       border-radius: 8px;
     }
-    #answerText {
-      display: none; /* Initially hide the answer */
+    #answerContainer {
+      display: none;  /* Hide entire answer container initially */
       margin-top: 10px;
       font-weight: bold;
     }
@@ -95,7 +95,12 @@
     <div class="modal-content">
       <h2 id="questionText"></h2>
       <div id="imageContainer" style="margin: 15px 0;"></div>
-      <p><strong>Answer:</strong> <span id="answerText"></span></p>
+      
+      <!-- Wrap the answer label and text inside this container -->
+      <div id="answerContainer">
+        <strong>Answer:</strong> <span id="answerText"></span>
+      </div>
+      
       <button id="showAnswerBtn">Show Answer</button>
       <div id="scoreButtons"></div>
       <button class="close" onclick="closeModal()">Close</button>
@@ -132,9 +137,10 @@
 
       document.getElementById('questionText').textContent = question;
       
+      const answerContainer = document.getElementById('answerContainer');
       const answerSpan = document.getElementById('answerText');
       answerSpan.textContent = answer;
-      answerSpan.style.display = 'none'; // Hide answer initially
+      answerContainer.style.display = 'none'; // hide answer container initially
 
       const imgContainer = document.getElementById('imageContainer');
       imgContainer.innerHTML = '';
@@ -147,10 +153,10 @@
       }
 
       const showAnswerBtn = document.getElementById('showAnswerBtn');
-      showAnswerBtn.style.display = 'inline-block'; // Show button
+      showAnswerBtn.style.display = 'inline-block';
       showAnswerBtn.onclick = () => {
-        answerSpan.style.display = 'inline'; // Reveal answer
-        showAnswerBtn.style.display = 'none'; // Hide button after click
+        answerContainer.style.display = 'block'; // reveal answer
+        showAnswerBtn.style.display = 'none';   // hide button after click
       };
 
       const scoreButtons = document.getElementById('scoreButtons');
