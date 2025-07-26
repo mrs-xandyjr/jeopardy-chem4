@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Jeopardy Game</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #00274d;
+      color: white;
+      text-align: center;
+    }
+    .board {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      max-width: 1000px;
+      margin: 30px auto;
+    }
+    .cell {
+      background: #004080;
+      padding: 20px;
+      border: 2px solid #0059b3;
+      cursor: pointer;
+      font-size: 24px;
+      font-weight: bold;
+      border-radius: 10px;
+    }
+    .cell.used {
+      background: #1a1a1a;
+      color: #666;
+      cursor: default;
+    }
+    #questionModal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.8);
+      display: none;
+      justify-content: center;
+      align-items: center;
+    }
+    .modal-content {
+      background: white;
+      color: black;
+      padding: 30px;
+      border-radius: 10px;
+      width: 500px;
+      max-width: 90%;
+    }
+    .close {
+      margin-top: 20px;
+      background: #004080;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+    .scores {
+      margin-top: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 15px;
+    }
+    .score-box {
+      background: #003366;
+      padding: 10px 15px;
+      border-radius: 8px;
+    }
+  </style>
+  <script src="https://unpkg.com/tabletop@1.6.0/tabletop.js"></script>
+</head>
+<body>
+
+  <h1>Jeopardy!</h1>
+  <div class="board" id="board">Loading board...</div>
+
+  <div id="questionModal">
+    <div class="modal-content">
+      <h2 id="questionText"></h2>
+      <div id="imageContainer" style="margin: 15px 0;"></div>
+      <p><strong>Answer:</strong> <span id="answerText"></span></p>
+      <div id="scoreButtons"></div>
+      <button class="close" onclick="closeModal()">Close</button>
+    </div>
+  </div>
+
+  <div class="scores" id="scores">
+    <!-- Score boxes will appear here -->
+  </div>
+
+  <script>
+    const sheetKey = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQQdg6a9recQuvlxHnC2BWrGx3frdc1nX3YtRVhgxlC1M5Gux_bLFQzTk_RVfDA-6BDvcSczWtOp6JF/pubhtml';
+
+    const scores = Array(8).fill(0);
+
+    function updateScores() {
+      const container = document.getElementById('scores');
+      container.innerHTML = '';
+      scores.forEach((score, i) => {
+        const box = document.createElement('div');
+        box.className = 'score-box';
+        box.textContent = `Team ${i + 1}: ${score}`;
+        container.appendChild(box);
+      });
+    }
+
+    function closeModal() {
+      document.getElementById('questionModal').style.display = 'none';
+    }
+
+    function showQuestion(question, answer, image, points, cell) {
+      if (cell.classList.contains('used')) return;
+      cell.classList.add('used');
+
+      document.getElementById('questionText').textContent = question;
+      document.getElementById('answerText').textContent = answer;
+
+      const imgContainer = document.getElementById('imageContainer');
+      imgContainer.innerHTML = '';
+      if (image && image.startsWith('http')) {
+        const img = document.createElement('img');
+        img.src = image;
+        img.style.maxWidth = '100%';
+        img.style.maxHeight = '200px';
+        imgContainer.appendChild(img);
+      }
+
+      const scoreButtons = document.getElementById('scoreButtons');
+      scoreButtons.innerHTML = '<p>Who answered correctly?</p>';
+      for (let i = 0; i < scores.length; i++) {
+        const btn = document.createElement('button');
+        btn.textContent = `Team ${i + 1}`;
+        btn.style.margin = '5px';
+        btn.onclick = () => {
+          scores[i] += parseInt(points);
+          updateScores();
+          closeModal();
+        };
+        scoreButtons.appendChild(btn);
+      }
+
+      document.getElementById('questionModal').style.display = 'flex';
+    }
+
+    function createBoard(data) {
+      const board = document.getElementById('board');
+      board.innerHTML = '';
+
+      // Group questions by category
+      const categories = {};
+      data.forEach(item => {
+        if (!categories[item.Category]) {
+          categories[item.Category] = [];
+        }
+        categories[item.Category].push(item);
+      });
+
+      const categoryNames = Object.keys(categories).slice(0, 5);
+
+      // Sort questions by point value
+      categoryNames.forEach(cat => {
+        categories[cat].sort((a, b) => Number(a.Points) - Number(b.Points));
+      });
+
+      // Add headers
+      categoryNames.forEach(cat => {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.textContent = cat;
+        board.appendChild(cell);
+      });
+
+      // Add question cells
+      const maxRows = Math.max(...Object.values(categories).map(qs => qs.length));
+      for (let i = 0; i < maxRows; i++) {
+        categoryNames.forEach(cat => {
+          const questions = categories[cat];
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+
+          if (questions[i]) {
+            const q = questions[i];
+            cell.textContent = q.Points;
+            cell.onclick = () => showQuestion(q.Question, q.Answer, q.Image, q.Points, cell);
+          } else {
+            cell.textContent = '';
+            cell.style.background = '#003366';
+            cell.style.cursor = 'default';
+          }
+
+          board.appendChild(cell);
+        });
+      }
+
+      updateScores();
+    }
+
+    window.onload = function () {
+      Tabletop.init({
+        key: sheetKey,
+        simpleSheet: true,
+        callback: createBoard
+      });
+    };
+  </script>
+
+</body>
+</html>
