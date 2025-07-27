@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Jeopardy Game</title>
+  <title>CHE-opardy!</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -102,7 +102,7 @@
 </head>
 <body>
 
-  <h1>Jeopardy!</h1>
+  <h1>CHE-opardy!</h1>
 
   <div id="teamSetup">
     <label for="numTeams">Number of Teams: </label>
@@ -292,7 +292,7 @@
           const [headers, ...rows] = data.values;
           const formatted = rows.map(row => {
             const obj = {};
-            headers.forEach((key, i) => obj[key] = row[i] || '');
+            headers.forEach((key, i) => obj[key] = row[i] || '';
             return obj;
           });
           createBoard(formatted);
