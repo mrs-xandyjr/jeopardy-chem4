@@ -1,115 +1,132 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
   <title>Jeopardy Game</title>
   <style>
     body {
-      background: #002244;
-      color: #fff;
-      font-family: sans-serif;
+      font-family: Arial, sans-serif;
+      background: #00274d;
+      color: white;
+      text-align: center;
       margin: 0;
       padding: 0;
-      text-align: center;
     }
-
-    #board {
+    .board {
       display: grid;
       grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
       max-width: 1000px;
-      margin: 20px auto;
-      gap: 2px;
+      margin: 30px auto;
     }
-
     .cell {
-      background: #0055aa;
+      background: #004080;
       padding: 20px;
-      font-size: 20px;
-      border: 2px solid #fff;
+      border: 2px solid #0059b3;
       cursor: pointer;
+      font-size: 24px;
+      font-weight: bold;
+      border-radius: 10px;
     }
-
     .cell.used {
-      background: #003366;
-      color: #aaa;
-      pointer-events: none;
+      background: #1a1a1a;
+      color: #666;
+      cursor: default;
     }
-
-    #scores {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      margin: 10px auto;
-    }
-
-    .score-box {
-      background: #003366;
-      margin: 5px;
-      padding: 10px 20px;
-      border: 2px solid #fff;
-      border-radius: 8px;
-      cursor: pointer;
-    }
-
     #questionModal {
       position: fixed;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0,0,0,0.9);
+      background: rgba(0,0,0,0.8);
       display: none;
-      flex-direction: column;
       justify-content: center;
       align-items: center;
-      z-index: 999;
-      color: white;
-      padding: 20px;
     }
-
-    #questionModal button {
-      margin: 10px;
-      padding: 10px 20px;
-      background: #0077cc;
+    .modal-content {
+      background: white;
+      color: black;
+      padding: 30px;
+      border-radius: 10px;
+      width: 500px;
+      max-width: 90%;
+    }
+    .close {
+      margin-top: 20px;
+      background: #004080;
       color: white;
       border: none;
-      font-size: 16px;
+      padding: 10px 20px;
       cursor: pointer;
+      border-radius: 5px;
     }
-
-    #questionModal button:hover {
-      background: #3399ff;
+    .scores {
+      margin: 20px 0;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 15px;
     }
-
-    #questionText {
-      font-size: 24px;
-      margin-bottom: 10px;
+    .score-box {
+      background: #003366;
+      padding: 10px 15px;
+      border-radius: 8px;
     }
-
     #answerContainer {
-      font-size: 22px;
-      color: yellow;
-      margin-top: 10px;
       display: none;
+      margin-top: 10px;
+      font-weight: bold;
     }
-
-    #imageContainer img {
-      margin: 10px 0;
+    #showAnswerBtn {
+      margin-top: 15px;
+      padding: 8px 15px;
+      cursor: pointer;
+      background-color: #004080;
+      color: white;
+      border: none;
+      border-radius: 5px;
+    }
+    #teamSetup {
+      margin: 20px 0;
+    }
+    #resetBtn {
+      background: #800000;
+      color: white;
+      padding: 10px 20px;
+      margin-top: 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
+
   <h1>Jeopardy!</h1>
-  <div id="scores"></div>
-  <div id="board">Loading...</div>
+
+  <div id="teamSetup">
+    <label for="numTeams">Number of Teams: </label>
+    <input type="number" id="numTeams" min="1" max="10" value="4">
+    <button onclick="initializeTeams()">Set Teams</button>
+    <div id="teamNamesContainer"></div>
+  </div>
+
+  <div class="scores" id="scores"></div>
+  <button id="resetBtn" onclick="resetGame()">Reset Game</button>
+
+  <div class="board" id="board">Loading board...</div>
 
   <div id="questionModal">
-    <div id="questionText"></div>
-    <div id="imageContainer"></div>
-    <button id="showAnswerBtn">Show Answer</button>
-    <div id="answerContainer">Answer: <span id="answerText"></span></div>
-    <div id="scoreButtons"></div>
-    <button onclick="closeModal()">Close</button>
+    <div class="modal-content">
+      <h2 id="questionText"></h2>
+      <div id="imageContainer" style="margin: 15px 0;"></div>
+      <div id="answerContainer">
+        <strong>Answer:</strong> <span id="answerText"></span>
+      </div>
+      <button id="showAnswerBtn">Show Answer</button>
+      <div id="scoreButtons"></div>
+      <button class="close" onclick="closeModal()">Close</button>
+    </div>
   </div>
 
   <script>
@@ -117,40 +134,76 @@
     const API_KEY = 'AIzaSyDV4eHorJ4Rz8VJrnPuyXTpx30EcOc0ca4';
     const RANGE = 'Sheet1';
 
-    let teams = [];
+    let scores = [];
+    let teamNames = [];
+    let usedQuestions = new Set();
+    let questionsByCell = {};
+
+    function saveState() {
+      localStorage.setItem('jeopardyScores', JSON.stringify(scores));
+      localStorage.setItem('jeopardyNames', JSON.stringify(teamNames));
+      localStorage.setItem('jeopardyUsed', JSON.stringify([...usedQuestions]));
+    }
+
+    function loadState() {
+      scores = JSON.parse(localStorage.getItem('jeopardyScores')) || [];
+      teamNames = JSON.parse(localStorage.getItem('jeopardyNames')) || [];
+      usedQuestions = new Set(JSON.parse(localStorage.getItem('jeopardyUsed')) || []);
+    }
+
+    function initializeTeams() {
+      const n = parseInt(document.getElementById('numTeams').value);
+      scores = Array(n).fill(0);
+      teamNames = Array.from({length: n}, (_, i) => `Team ${i + 1}`);
+      document.getElementById('teamNamesContainer').innerHTML = '';
+      teamNames.forEach((name, i) => {
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = name;
+        input.oninput = (e) => {
+          teamNames[i] = e.target.value;
+          saveState();
+          updateScores();
+        };
+        input.style.margin = '5px';
+        document.getElementById('teamNamesContainer').appendChild(input);
+      });
+      saveState();
+      updateScores();
+    }
 
     function updateScores() {
       const container = document.getElementById('scores');
       container.innerHTML = '';
-      teams.forEach((team, i) => {
+      scores.forEach((score, i) => {
         const box = document.createElement('div');
         box.className = 'score-box';
-        box.textContent = `${team.name}: ${team.score}`;
-        box.onclick = () => {
-          const change = prompt(`Adjust score for ${team.name} (use + or -):`, 0);
-          if (!isNaN(change)) {
-            teams[i].score += parseInt(change);
-            updateScores();
-          }
-        };
+        box.textContent = `${teamNames[i] || 'Team ' + (i+1)}: ${score}`;
         container.appendChild(box);
       });
+    }
+
+    function resetGame() {
+      localStorage.clear();
+      scores = [];
+      teamNames = [];
+      usedQuestions.clear();
+      location.reload();
     }
 
     function closeModal() {
       document.getElementById('questionModal').style.display = 'none';
     }
 
-    function showQuestion(question, answer, image, points, cell) {
+    function showQuestion(question, answer, image, points, cellKey, cell) {
       if (cell.classList.contains('used')) return;
       cell.classList.add('used');
+      usedQuestions.add(cellKey);
+      saveState();
 
       document.getElementById('questionText').textContent = question;
-
-      const answerContainer = document.getElementById('answerContainer');
-      const answerSpan = document.getElementById('answerText');
-      answerSpan.textContent = answer;
-      answerContainer.style.display = 'none';
+      document.getElementById('answerContainer').style.display = 'none';
+      document.getElementById('answerText').textContent = answer;
 
       const imgContainer = document.getElementById('imageContainer');
       imgContainer.innerHTML = '';
@@ -165,17 +218,19 @@
       const showAnswerBtn = document.getElementById('showAnswerBtn');
       showAnswerBtn.style.display = 'inline-block';
       showAnswerBtn.onclick = () => {
-        answerContainer.style.display = 'block';
+        document.getElementById('answerContainer').style.display = 'block';
         showAnswerBtn.style.display = 'none';
       };
 
       const scoreButtons = document.getElementById('scoreButtons');
       scoreButtons.innerHTML = '<p>Who answered correctly?</p>';
-      teams.forEach((team, i) => {
+      scores.forEach((_, i) => {
         const btn = document.createElement('button');
-        btn.textContent = team.name;
+        btn.textContent = teamNames[i] || `Team ${i + 1}`;
+        btn.style.margin = '5px';
         btn.onclick = () => {
-          teams[i].score += parseInt(points);
+          scores[i] += parseInt(points);
+          saveState();
           updateScores();
           closeModal();
         };
@@ -188,15 +243,11 @@
     function createBoard(data) {
       const board = document.getElementById('board');
       board.innerHTML = '';
-
       const categories = {};
       data.forEach(item => {
-        if (!categories[item.Category]) {
-          categories[item.Category] = [];
-        }
+        if (!categories[item.Category]) categories[item.Category] = [];
         categories[item.Category].push(item);
       });
-
       const categoryNames = Object.keys(categories).slice(0, 5);
       categoryNames.forEach(cat => {
         categories[cat].sort((a, b) => Number(a.Points) - Number(b.Points));
@@ -215,32 +266,29 @@
           const questions = categories[cat];
           const cell = document.createElement('div');
           cell.className = 'cell';
-
           if (questions[i]) {
             const q = questions[i];
+            const key = `${cat}-${q.Points}`;
+            if (usedQuestions.has(key)) cell.classList.add('used');
             cell.textContent = q.Points;
-            cell.onclick = () => showQuestion(q.Question, q.Answer, q.Image, q.Points, cell);
+            cell.onclick = () => showQuestion(q.Question, q.Answer, q.Image, q.Points, key, cell);
+            questionsByCell[key] = cell;
           } else {
             cell.textContent = '';
             cell.style.background = '#003366';
             cell.style.cursor = 'default';
           }
-
           board.appendChild(cell);
         });
       }
-
-      updateScores();
     }
 
     function fetchAndStart() {
+      loadState();
       const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${RANGE}?key=${API_KEY}`;
       fetch(url)
         .then(res => res.json())
         .then(data => {
-          if (!data.values || data.values.length < 2) {
-            throw new Error('No data found or insufficient data.');
-          }
           const [headers, ...rows] = data.values;
           const formatted = rows.map(row => {
             const obj = {};
@@ -248,26 +296,18 @@
             return obj;
           });
           createBoard(formatted);
+          if (scores.length && teamNames.length) {
+            updateScores();
+            initializeTeams(); // Re-render names
+          }
         })
         .catch(err => {
-          console.error('Google Sheets API error:', err);
+          console.error('Error:', err);
           document.getElementById('board').textContent = 'Failed to load board.';
         });
     }
 
-    window.onload = () => {
-      let numTeams = parseInt(prompt('Enter number of teams:', 4));
-      if (isNaN(numTeams) || numTeams < 1) numTeams = 4;
-
-      teams = [];
-      for (let i = 0; i < numTeams; i++) {
-        let name = prompt(`Enter name for Team ${i + 1}:`, `Team ${i + 1}`);
-        if (!name) name = `Team ${i + 1}`;
-        teams.push({ name, score: 0 });
-      }
-
-      fetchAndStart();
-    };
+    window.onload = fetchAndStart;
   </script>
 </body>
 </html>
