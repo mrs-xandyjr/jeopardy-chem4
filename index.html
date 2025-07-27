@@ -9,7 +9,8 @@
     .cell { background:#004080; padding:20px; border:2px solid #0059b3; cursor:pointer; font-size:24px; border-radius:10px; }
     .cell.used { background:#1a1a1a; color:#666; cursor:default; }
     .scores { margin:20px 0; display:flex; flex-wrap:wrap; justify-content:center; gap:15px; }
-    .score-box { background:#003366; padding:10px 15px; border-radius:8px; }
+    .score-box { background:#003366; padding:10px 15px; border-radius:8px; min-width:100px; }
+    .score-box input { width:50px; text-align:right; font-weight:bold; font-size:16px; margin-left:5px; }
     #teamSetup { margin:20px; }
     #teamSetup input { margin:0 5px; }
     #resetBtn { background:#800; color:#fff; padding:10px 20px; border:none; border-radius:5px; cursor:pointer; margin-bottom:10px; }
@@ -94,7 +95,20 @@
       scores.forEach((sc, i) => {
         const div = document.createElement('div');
         div.className = 'score-box';
-        div.textContent = `${teamNames[i] || `Team ${i + 1}`}: ${sc}`;
+        const label = document.createElement('span');
+        label.textContent = `${teamNames[i] || `Team ${i + 1}`}: `;
+
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.value = sc;
+        input.onchange = e => {
+          scores[i] = parseInt(e.target.value) || 0;
+          saveState();
+          updateScores();
+        };
+
+        div.appendChild(label);
+        div.appendChild(input);
         cont.appendChild(div);
       });
     }
@@ -199,7 +213,7 @@
         const [h, ...rows] = data.values;
         const formatted = rows.map(row => {
           const obj = {};
-          h.forEach((k, i) => obj[k] = row[i] || '');
+          h.forEach((k, i) => obj[k] = row[i] || '';
           return obj;
         });
         createBoard(formatted);
