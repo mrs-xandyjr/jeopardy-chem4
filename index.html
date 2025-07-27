@@ -1,111 +1,31 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Jeopardy Game</title>
+  <meta charset="utf-8">
+  <title>CHE‑opardy!</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #00274d;
-      color: white;
-      text-align: center;
-      margin: 0;
-      padding: 0;
-    }
-    .board {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 10px;
-      max-width: 1000px;
-      margin: 30px auto;
-    }
-    .cell {
-      background: #004080;
-      padding: 20px;
-      border: 2px solid #0059b3;
-      cursor: pointer;
-      font-size: 24px;
-      font-weight: bold;
-      border-radius: 10px;
-    }
-    .cell.used {
-      background: #1a1a1a;
-      color: #666;
-      cursor: default;
-    }
-    #questionModal {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.8);
-      display: none;
-      justify-content: center;
-      align-items: center;
-    }
-    .modal-content {
-      background: white;
-      color: black;
-      padding: 30px;
-      border-radius: 10px;
-      width: 500px;
-      max-width: 90%;
-    }
-    .close {
-      margin-top: 20px;
-      background: #004080;
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      cursor: pointer;
-      border-radius: 5px;
-    }
-    .scores {
-      margin: 20px 0;
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 15px;
-    }
-    .score-box {
-      background: #003366;
-      padding: 10px 15px;
-      border-radius: 8px;
-    }
-    #answerContainer {
-      display: none;
-      margin-top: 10px;
-      font-weight: bold;
-    }
-    #showAnswerBtn {
-      margin-top: 15px;
-      padding: 8px 15px;
-      cursor: pointer;
-      background-color: #004080;
-      color: white;
-      border: none;
-      border-radius: 5px;
-    }
-    #teamSetup {
-      margin: 20px 0;
-    }
-    #resetBtn {
-      background: #800000;
-      color: white;
-      padding: 10px 20px;
-      margin-top: 20px;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
+    body{background:#00274d;color:#fff;font-family:sans-serif;margin:0;padding:0;text-align:center;}
+    .board{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;max-width:1000px;margin:30px auto;}
+    .cell{background:#004080;padding:20px;border:2px solid #0059b3;cursor:pointer;font-size:24px;border-radius:10px;}
+    .cell.used{background:#1a1a1a;color:#666;cursor:default;}
+    .scores{margin:20px 0;display:flex;flex-wrap:wrap;justify-content:center;gap:15px;}
+    .score-box{background:#003366;padding:10px 15px;border-radius:8px;}
+    #teamSetup{margin:20px;}
+    #teamSetup input{margin:0 5px;}
+    #resetBtn{background:#800;color:#fff;padding:10px 20px;border:none;border-radius:5px;cursor:pointer;margin-bottom:10px;}
+    #questionModal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:none;justify-content:center;align-items:center;color:#fff;padding:20px;}
+    .modal-content{background:#fff;color:#000;padding:30px;border-radius:10px;width:90%;max-width:500px;text-align:center;}
+    .modal-content button{margin:10px;padding:10px 20px;background:#004080;color:#fff;border:none;border-radius:5px;cursor:pointer;}
+    #answerContainer{display:none;font-weight:bold;margin:10px 0;color:green;}
+    #imageContainer img{max-width:100%;max-height:200px;margin:10px 0;}
   </style>
 </head>
 <body>
 
-  <h1>Jeopardy!</h1>
+  <h1>CHE‑opardy!</h1>
 
   <div id="teamSetup">
-    <label for="numTeams">Number of Teams: </label>
+    <label>Number of Teams:</label>
     <input type="number" id="numTeams" min="1" max="10" value="4">
     <button onclick="initializeTeams()">Set Teams</button>
     <div id="teamNamesContainer"></div>
@@ -114,18 +34,16 @@
   <div class="scores" id="scores"></div>
   <button id="resetBtn" onclick="resetGame()">Reset Game</button>
 
-  <div class="board" id="board">Loading board...</div>
+  <div class="board" id="board">Loading board…</div>
 
   <div id="questionModal">
     <div class="modal-content">
-      <h2 id="questionText"></h2>
-      <div id="imageContainer" style="margin: 15px 0;"></div>
-      <div id="answerContainer">
-        <strong>Answer:</strong> <span id="answerText"></span>
-      </div>
+      <div id="questionText"></div>
+      <div id="imageContainer"></div>
+      <div id="answerContainer">Answer: <span id="answerText"></span></div>
       <button id="showAnswerBtn">Show Answer</button>
       <div id="scoreButtons"></div>
-      <button class="close" onclick="closeModal()">Close</button>
+      <button onclick="closeModal()">Close</button>
     </div>
   </div>
 
@@ -134,180 +52,155 @@
     const API_KEY = 'AIzaSyDV4eHorJ4Rz8VJrnPuyXTpx30EcOc0ca4';
     const RANGE = 'Sheet1';
 
-    let scores = [];
-    let teamNames = [];
-    let usedQuestions = new Set();
-    let questionsByCell = {};
+    let scores = [], teamNames = [], usedQuestions = new Set();
 
-    function saveState() {
-      localStorage.setItem('jeopardyScores', JSON.stringify(scores));
-      localStorage.setItem('jeopardyNames', JSON.stringify(teamNames));
-      localStorage.setItem('jeopardyUsed', JSON.stringify([...usedQuestions]));
+    function saveState(){
+      localStorage.setItem('jScores', JSON.stringify(scores));
+      localStorage.setItem('jNames', JSON.stringify(teamNames));
+      localStorage.setItem('jUsed', JSON.stringify(Array.from(usedQuestions)));
     }
 
-    function loadState() {
-      scores = JSON.parse(localStorage.getItem('jeopardyScores')) || [];
-      teamNames = JSON.parse(localStorage.getItem('jeopardyNames')) || [];
-      usedQuestions = new Set(JSON.parse(localStorage.getItem('jeopardyUsed')) || []);
+    function loadState(){
+      scores = JSON.parse(localStorage.getItem('jScores')) || [];
+      teamNames = JSON.parse(localStorage.getItem('jNames')) || [];
+      usedQuestions = new Set(JSON.parse(localStorage.getItem('jUsed')) || []);
     }
 
-    function initializeTeams() {
-      const n = parseInt(document.getElementById('numTeams').value);
+    function initializeTeams(){
+      const n = parseInt(document.getElementById('numTeams').value) || 4;
       scores = Array(n).fill(0);
-      teamNames = Array.from({length: n}, (_, i) => `Team ${i + 1}`);
-      document.getElementById('teamNamesContainer').innerHTML = '';
-      teamNames.forEach((name, i) => {
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.value = name;
-        input.oninput = (e) => {
-          teamNames[i] = e.target.value;
-          saveState();
-          updateScores();
+      teamNames = Array.from({length:n},(_,i)=>`Team ${i+1}`);
+      const container = document.getElementById('teamNamesContainer');
+      container.innerHTML = '';
+      teamNames.forEach((nm,i)=>{
+        const inp = document.createElement('input');
+        inp.value = nm;
+        inp.oninput = e => {
+          teamNames[i] = e.target.value || `Team ${i+1}`;
+          saveState(); updateScores();
         };
-        input.style.margin = '5px';
-        document.getElementById('teamNamesContainer').appendChild(input);
+        container.appendChild(inp);
       });
       saveState();
       updateScores();
     }
 
-    function updateScores() {
-      const container = document.getElementById('scores');
-      container.innerHTML = '';
-      scores.forEach((score, i) => {
-        const box = document.createElement('div');
-        box.className = 'score-box';
-        box.textContent = `${teamNames[i] || 'Team ' + (i+1)}: ${score}`;
-        container.appendChild(box);
+    function updateScores(){
+      const cont = document.getElementById('scores');
+      cont.innerHTML = '';
+      scores.forEach((sc,i)=>{
+        const div = document.createElement('div');
+        div.className='score-box';
+        div.textContent=`${teamNames[i]||`Team ${i+1}`}: ${sc}`;
+        cont.appendChild(div);
       });
     }
 
-    function resetGame() {
+    function resetGame(){
       localStorage.clear();
-      scores = [];
-      teamNames = [];
-      usedQuestions.clear();
       location.reload();
     }
 
-    function closeModal() {
-      document.getElementById('questionModal').style.display = 'none';
+    function closeModal(){
+      document.getElementById('questionModal').style.display='none';
     }
 
-    function showQuestion(question, answer, image, points, cellKey, cell) {
-      if (cell.classList.contains('used')) return;
+    function showQuestion(q, ans, img, pts, key, cell){
+      if(cell.classList.contains('used')) return;
       cell.classList.add('used');
-      usedQuestions.add(cellKey);
-      saveState();
+      usedQuestions.add(key); saveState();
 
-      document.getElementById('questionText').textContent = question;
-      document.getElementById('answerContainer').style.display = 'none';
-      document.getElementById('answerText').textContent = answer;
+      document.getElementById('questionText').textContent=q;
+      document.getElementById('answerText').textContent=ans;
+      document.getElementById('answerContainer').style.display='none';
 
-      const imgContainer = document.getElementById('imageContainer');
-      imgContainer.innerHTML = '';
-      if (image && image.startsWith('http')) {
-        const img = document.createElement('img');
-        img.src = image;
-        img.style.maxWidth = '100%';
-        img.style.maxHeight = '200px';
-        imgContainer.appendChild(img);
+      const imgC = document.getElementById('imageContainer');
+      imgC.innerHTML='';
+      if(img&&img.startsWith('http')){
+        const el=document.createElement('img');
+        el.src=img;
+        imgC.appendChild(el);
       }
 
-      const showAnswerBtn = document.getElementById('showAnswerBtn');
-      showAnswerBtn.style.display = 'inline-block';
-      showAnswerBtn.onclick = () => {
-        document.getElementById('answerContainer').style.display = 'block';
-        showAnswerBtn.style.display = 'none';
+      const showBtn = document.getElementById('showAnswerBtn');
+      showBtn.style.display='inline-block';
+      showBtn.onclick = () => {
+        document.getElementById('answerContainer').style.display='block';
+        showBtn.style.display='none';
       };
 
-      const scoreButtons = document.getElementById('scoreButtons');
-      scoreButtons.innerHTML = '<p>Who answered correctly?</p>';
-      scores.forEach((_, i) => {
-        const btn = document.createElement('button');
-        btn.textContent = teamNames[i] || `Team ${i + 1}`;
-        btn.style.margin = '5px';
-        btn.onclick = () => {
-          scores[i] += parseInt(points);
-          saveState();
-          updateScores();
-          closeModal();
+      const sb = document.getElementById('scoreButtons');
+      sb.innerHTML='<p>Who answered correctly?</p>';
+      teamNames.forEach((nm,i)=>{
+        const b = document.createElement('button');
+        b.textContent=nm;
+        b.onclick = () => {
+          scores[i]+= parseInt(pts)||0;
+          saveState(); updateScores(); closeModal();
         };
-        scoreButtons.appendChild(btn);
+        sb.appendChild(b);
       });
 
-      document.getElementById('questionModal').style.display = 'flex';
+      document.getElementById('questionModal').style.display='flex';
     }
 
-    function createBoard(data) {
+    function createBoard(data){
       const board = document.getElementById('board');
-      board.innerHTML = '';
-      const categories = {};
-      data.forEach(item => {
-        if (!categories[item.Category]) categories[item.Category] = [];
-        categories[item.Category].push(item);
-      });
-      const categoryNames = Object.keys(categories).slice(0, 5);
-      categoryNames.forEach(cat => {
-        categories[cat].sort((a, b) => Number(a.Points) - Number(b.Points));
+      board.innerHTML='';
+
+      const cats = {};
+      data.forEach((it,idx)=>cats[it.Category]=cats[it.Category]||[]),
+      data.forEach((it,idx)=>cats[it.Category].push({...it,index:idx}));
+
+      const categoryNames = Object.keys(cats).slice(0,5);
+      categoryNames.forEach(cat=>cats[cat].sort((a,b)=>a.Points-b.Points));
+
+      categoryNames.forEach(cat=>{
+        const hdr = document.createElement('div');
+        hdr.className='cell'; hdr.textContent=cat;
+        board.appendChild(hdr);
       });
 
-      categoryNames.forEach(cat => {
-        const cell = document.createElement('div');
-        cell.className = 'cell';
-        cell.textContent = cat;
-        board.appendChild(cell);
-      });
-
-      const maxRows = Math.max(...Object.values(categories).map(qs => qs.length));
-      for (let i = 0; i < maxRows; i++) {
-        categoryNames.forEach(cat => {
-          const questions = categories[cat];
+      const maxRows = Math.max(...categoryNames.map(cat=>cats[cat].length));
+      for(let r=0;r<maxRows;r++){
+        categoryNames.forEach(cat=>{
           const cell = document.createElement('div');
-          cell.className = 'cell';
-          if (questions[i]) {
-            const q = questions[i];
-            const key = `${cat}-${q.Points}`;
-            if (usedQuestions.has(key)) cell.classList.add('used');
-            cell.textContent = q.Points;
-            cell.onclick = () => showQuestion(q.Question, q.Answer, q.Image, q.Points, key, cell);
-            questionsByCell[key] = cell;
+          cell.className='cell';
+          const qs = cats[cat];
+          if(qs[r]){
+            const q = qs[r], key=`${cat}-${q.Points}-${q.index}`;
+            cell.textContent=q.Points;
+            if(usedQuestions.has(key)) cell.classList.add('used');
+            cell.onclick=()=>showQuestion(q.Question,q.Answer,q.Image,q.Points,key,cell);
           } else {
-            cell.textContent = '';
-            cell.style.background = '#003366';
-            cell.style.cursor = 'default';
+            cell.textContent=''; cell.style.background='#003366'; cell.style.cursor='default';
           }
           board.appendChild(cell);
         });
       }
     }
 
-    function fetchAndStart() {
+    function fetchAndStart(){
       loadState();
-      const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${RANGE}?key=${API_KEY}`;
-      fetch(url)
-        .then(res => res.json())
-        .then(data => {
-          const [headers, ...rows] = data.values;
-          const formatted = rows.map(row => {
-            const obj = {};
-            headers.forEach((key, i) => obj[key] = row[i] || '');
-            return obj;
-          });
-          createBoard(formatted);
-          if (scores.length && teamNames.length) {
-            updateScores();
-            initializeTeams(); // Re-render names
-          }
-        })
-        .catch(err => {
-          console.error('Error:', err);
-          document.getElementById('board').textContent = 'Failed to load board.';
+      initializeTeams(); // sets up names if none
+      const url=`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${RANGE}?key=${API_KEY}`;
+      fetch(url).then(r=>r.json()).then(data=>{
+        if(!data.values||data.values.length<2)return;
+        const [h,...rows]=data.values;
+        const formatted=rows.map(row=>{
+          const obj={};
+          h.forEach((k,i)=>obj[k]=row[i]||'');
+          return obj;
         });
+        createBoard(formatted);
+      }).catch(err=>{
+        console.error(err);
+        document.getElementById('board').textContent='Failed to load board.';
+      });
     }
 
-    window.onload = fetchAndStart;
+    window.onload=fetchAndStart;
   </script>
+
 </body>
 </html>
