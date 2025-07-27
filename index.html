@@ -112,7 +112,8 @@
     const API_KEY = 'AIzaSyDV4eHorJ4Rz8VJrnPuyXTpx30EcOc0ca4';
     const RANGE = 'Sheet1';
 
-    const scores = Array(8).fill(0);
+    let scores = [];
+    let numTeams = 0;
 
     function updateScores() {
       const container = document.getElementById('scores');
@@ -122,9 +123,9 @@
         box.className = 'score-box';
         box.textContent = `Team ${i + 1}: ${score}`;
         box.onclick = () => {
-          const input = prompt(`Enter new score for Team ${i + 1}:`, scores[i]);
-          if (input !== null && !isNaN(input)) {
-            scores[i] = parseInt(input);
+          const change = prompt(`Adjust score for Team ${i + 1} (use + or -):`, 0);
+          if (!isNaN(change)) {
+            scores[i] += parseInt(change);
             updateScores();
           }
         };
@@ -141,8 +142,11 @@
       cell.classList.add('used');
 
       document.getElementById('questionText').textContent = question;
-      document.getElementById('answerText').textContent = answer;
-      document.getElementById('answerContainer').style.display = 'none';
+      
+      const answerContainer = document.getElementById('answerContainer');
+      const answerSpan = document.getElementById('answerText');
+      answerSpan.textContent = answer;
+      answerContainer.style.display = 'none';
 
       const imgContainer = document.getElementById('imageContainer');
       imgContainer.innerHTML = '';
@@ -157,7 +161,7 @@
       const showAnswerBtn = document.getElementById('showAnswerBtn');
       showAnswerBtn.style.display = 'inline-block';
       showAnswerBtn.onclick = () => {
-        document.getElementById('answerContainer').style.display = 'block';
+        answerContainer.style.display = 'block';
         showAnswerBtn.style.display = 'none';
       };
 
@@ -191,7 +195,6 @@
       });
 
       const categoryNames = Object.keys(categories).slice(0, 5);
-
       categoryNames.forEach(cat => {
         categories[cat].sort((a, b) => Number(a.Points) - Number(b.Points));
       });
@@ -249,8 +252,12 @@
         });
     }
 
-    window.onload = fetchAndStart;
+    window.onload = () => {
+      numTeams = parseInt(prompt('Enter number of teams:', 4));
+      if (isNaN(numTeams) || numTeams < 1) numTeams = 4;
+      scores = Array(numTeams).fill(0);
+      fetchAndStart();
+    };
   </script>
-
 </body>
 </html>
