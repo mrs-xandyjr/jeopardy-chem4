@@ -69,9 +69,10 @@
       background: #003366;
       padding: 10px 15px;
       border-radius: 8px;
+      cursor: pointer;
     }
     #answerContainer {
-      display: none;  /* Hide entire answer container initially */
+      display: none;
       margin-top: 10px;
       font-weight: bold;
     }
@@ -95,12 +96,9 @@
     <div class="modal-content">
       <h2 id="questionText"></h2>
       <div id="imageContainer" style="margin: 15px 0;"></div>
-      
-      <!-- Wrap the answer label and text inside this container -->
       <div id="answerContainer">
         <strong>Answer:</strong> <span id="answerText"></span>
       </div>
-      
       <button id="showAnswerBtn">Show Answer</button>
       <div id="scoreButtons"></div>
       <button class="close" onclick="closeModal()">Close</button>
@@ -123,6 +121,13 @@
         const box = document.createElement('div');
         box.className = 'score-box';
         box.textContent = `Team ${i + 1}: ${score}`;
+        box.onclick = () => {
+          const input = prompt(`Enter new score for Team ${i + 1}:`, scores[i]);
+          if (input !== null && !isNaN(input)) {
+            scores[i] = parseInt(input);
+            updateScores();
+          }
+        };
         container.appendChild(box);
       });
     }
@@ -136,11 +141,8 @@
       cell.classList.add('used');
 
       document.getElementById('questionText').textContent = question;
-      
-      const answerContainer = document.getElementById('answerContainer');
-      const answerSpan = document.getElementById('answerText');
-      answerSpan.textContent = answer;
-      answerContainer.style.display = 'none'; // hide answer container initially
+      document.getElementById('answerText').textContent = answer;
+      document.getElementById('answerContainer').style.display = 'none';
 
       const imgContainer = document.getElementById('imageContainer');
       imgContainer.innerHTML = '';
@@ -155,8 +157,8 @@
       const showAnswerBtn = document.getElementById('showAnswerBtn');
       showAnswerBtn.style.display = 'inline-block';
       showAnswerBtn.onclick = () => {
-        answerContainer.style.display = 'block'; // reveal answer
-        showAnswerBtn.style.display = 'none';   // hide button after click
+        document.getElementById('answerContainer').style.display = 'block';
+        showAnswerBtn.style.display = 'none';
       };
 
       const scoreButtons = document.getElementById('scoreButtons');
