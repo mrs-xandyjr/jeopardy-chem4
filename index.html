@@ -1,131 +1,135 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8" />
   <title>Jeopardy Game</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background: #00274d;
-      color: white;
+      background: #002244;
+      color: #fff;
+      font-family: sans-serif;
+      margin: 0;
+      padding: 0;
       text-align: center;
     }
-    .board {
+
+    #board {
       display: grid;
       grid-template-columns: repeat(5, 1fr);
-      gap: 10px;
       max-width: 1000px;
-      margin: 30px auto;
+      margin: 20px auto;
+      gap: 2px;
     }
+
     .cell {
-      background: #004080;
+      background: #0055aa;
       padding: 20px;
-      border: 2px solid #0059b3;
+      font-size: 20px;
+      border: 2px solid #fff;
       cursor: pointer;
-      font-size: 24px;
-      font-weight: bold;
-      border-radius: 10px;
     }
+
     .cell.used {
-      background: #1a1a1a;
-      color: #666;
-      cursor: default;
+      background: #003366;
+      color: #aaa;
+      pointer-events: none;
     }
+
+    #scores {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin: 10px auto;
+    }
+
+    .score-box {
+      background: #003366;
+      margin: 5px;
+      padding: 10px 20px;
+      border: 2px solid #fff;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
     #questionModal {
       position: fixed;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0,0,0,0.8);
+      background: rgba(0,0,0,0.9);
       display: none;
+      flex-direction: column;
       justify-content: center;
       align-items: center;
-    }
-    .modal-content {
-      background: white;
-      color: black;
-      padding: 30px;
-      border-radius: 10px;
-      width: 500px;
-      max-width: 90%;
-    }
-    .close {
-      margin-top: 20px;
-      background: #004080;
+      z-index: 999;
       color: white;
-      border: none;
+      padding: 20px;
+    }
+
+    #questionModal button {
+      margin: 10px;
       padding: 10px 20px;
-      cursor: pointer;
-      border-radius: 5px;
-    }
-    .scores {
-      margin-top: 20px;
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 15px;
-    }
-    .score-box {
-      background: #003366;
-      padding: 10px 15px;
-      border-radius: 8px;
-      cursor: pointer;
-    }
-    #answerContainer {
-      display: none;
-      margin-top: 10px;
-      font-weight: bold;
-    }
-    #showAnswerBtn {
-      margin-top: 15px;
-      padding: 8px 15px;
-      cursor: pointer;
-      background-color: #004080;
+      background: #0077cc;
       color: white;
       border: none;
-      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    #questionModal button:hover {
+      background: #3399ff;
+    }
+
+    #questionText {
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+
+    #answerContainer {
+      font-size: 22px;
+      color: yellow;
+      margin-top: 10px;
+      display: none;
+    }
+
+    #imageContainer img {
+      margin: 10px 0;
     }
   </style>
 </head>
 <body>
-
   <h1>Jeopardy!</h1>
-  <div class="board" id="board">Loading board...</div>
+  <div id="scores"></div>
+  <div id="board">Loading...</div>
 
   <div id="questionModal">
-    <div class="modal-content">
-      <h2 id="questionText"></h2>
-      <div id="imageContainer" style="margin: 15px 0;"></div>
-      <div id="answerContainer">
-        <strong>Answer:</strong> <span id="answerText"></span>
-      </div>
-      <button id="showAnswerBtn">Show Answer</button>
-      <div id="scoreButtons"></div>
-      <button class="close" onclick="closeModal()">Close</button>
-    </div>
+    <div id="questionText"></div>
+    <div id="imageContainer"></div>
+    <button id="showAnswerBtn">Show Answer</button>
+    <div id="answerContainer">Answer: <span id="answerText"></span></div>
+    <div id="scoreButtons"></div>
+    <button onclick="closeModal()">Close</button>
   </div>
-
-  <div class="scores" id="scores"></div>
 
   <script>
     const SHEET_ID = '1txasP_Te7O6BiyQvK88npPde_etEW9QnkOdAVzP7NKc';
     const API_KEY = 'AIzaSyDV4eHorJ4Rz8VJrnPuyXTpx30EcOc0ca4';
     const RANGE = 'Sheet1';
 
-    let scores = [];
-    let numTeams = 0;
+    let teams = [];
 
     function updateScores() {
       const container = document.getElementById('scores');
       container.innerHTML = '';
-      scores.forEach((score, i) => {
+      teams.forEach((team, i) => {
         const box = document.createElement('div');
         box.className = 'score-box';
-        box.textContent = `Team ${i + 1}: ${score}`;
+        box.textContent = `${team.name}: ${team.score}`;
         box.onclick = () => {
-          const change = prompt(`Adjust score for Team ${i + 1} (use + or -):`, 0);
+          const change = prompt(`Adjust score for ${team.name} (use + or -):`, 0);
           if (!isNaN(change)) {
-            scores[i] += parseInt(change);
+            teams[i].score += parseInt(change);
             updateScores();
           }
         };
@@ -142,7 +146,7 @@
       cell.classList.add('used');
 
       document.getElementById('questionText').textContent = question;
-      
+
       const answerContainer = document.getElementById('answerContainer');
       const answerSpan = document.getElementById('answerText');
       answerSpan.textContent = answer;
@@ -167,17 +171,16 @@
 
       const scoreButtons = document.getElementById('scoreButtons');
       scoreButtons.innerHTML = '<p>Who answered correctly?</p>';
-      for (let i = 0; i < scores.length; i++) {
+      teams.forEach((team, i) => {
         const btn = document.createElement('button');
-        btn.textContent = `Team ${i + 1}`;
-        btn.style.margin = '5px';
+        btn.textContent = team.name;
         btn.onclick = () => {
-          scores[i] += parseInt(points);
+          teams[i].score += parseInt(points);
           updateScores();
           closeModal();
         };
         scoreButtons.appendChild(btn);
-      }
+      });
 
       document.getElementById('questionModal').style.display = 'flex';
     }
@@ -253,9 +256,16 @@
     }
 
     window.onload = () => {
-      numTeams = parseInt(prompt('Enter number of teams:', 4));
+      let numTeams = parseInt(prompt('Enter number of teams:', 4));
       if (isNaN(numTeams) || numTeams < 1) numTeams = 4;
-      scores = Array(numTeams).fill(0);
+
+      teams = [];
+      for (let i = 0; i < numTeams; i++) {
+        let name = prompt(`Enter name for Team ${i + 1}:`, `Team ${i + 1}`);
+        if (!name) name = `Team ${i + 1}`;
+        teams.push({ name, score: 0 });
+      }
+
       fetchAndStart();
     };
   </script>
